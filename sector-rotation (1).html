@@ -1,0 +1,1883 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>섹터 로테이션 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Pretendard:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:        #0a0e17;
+  --bg-soft:   #0d1220;
+  --panel:     #111827;
+  --panel-2:   #1a2332;
+  --panel-3:   #1e2a3a;
+  --border:    #1f2d3d;
+  --border-hi: #2e4057;
+  --text:      #e2eaf3;
+  --text-2:    #8fa4bc;
+  --muted:     #4a6080;
+  --up:        #26a69a;
+  --up-2:      #1de9b6;
+  --down:      #ef5350;
+  --down-2:    #ff5252;
+  --accent:    #2962ff;
+  --gold:      #ffa726;
+  --r-5: 5px;
+  --r-8: 8px;
+  --r-10: 10px;
+}
+html, body { min-height: 100vh; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard Variable', 'Pretendard', 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.005em;
+  padding: 16px;
+}
+.container { max-width: 1400px; margin: 0 auto; }
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Header ── */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-10);
+  margin-bottom: 14px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--muted); flex-shrink: 0;
+}
+.brand-dot.ok { background: var(--up); box-shadow: 0 0 10px var(--up); }
+.brand-dot.err { background: var(--down); box-shadow: 0 0 10px var(--down); }
+.brand-dot.loading { background: var(--gold); box-shadow: 0 0 10px var(--gold); animation: blink 1s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: 0.3; } }
+.brand h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.brand-sub { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 3px; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.updated { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+
+/* ── Buttons ── */
+button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-8);
+  padding: 8px 16px;
+  font-family: 'Pretendard Variable', 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+button:hover:not(:disabled) { filter: brightness(1.15); }
+button:disabled { background: var(--panel-2); color: var(--muted); cursor: not-allowed; filter: none; }
+button.ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  padding: 7px 12px;
+  font-size: 11px;
+}
+button.ghost:hover:not(:disabled) { border-color: var(--border-hi); color: var(--text); filter: none; }
+button.icon-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  padding: 7px 10px;
+  border-radius: var(--r-8);
+  font-size: 13px;
+}
+button.icon-btn:hover { border-color: var(--border-hi); color: var(--text); filter: none; }
+
+/* ── Card ── */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-10);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+/* ── API Key modal overlay ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.15s ease;
+}
+.modal-overlay.hidden { display: none; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-10);
+  padding: 22px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+.modal h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.modal p { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+.modal .key-row { display: flex; gap: 6px; margin-bottom: 10px; }
+.modal input[type="password"], .modal input[type="text"] {
+  flex: 1; min-width: 0;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--r-8);
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  outline: none;
+}
+.modal input:focus { border-color: var(--accent); }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 12px; }
+.modal-msg {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+.modal-msg.ok { color: var(--up); }
+.modal-msg.err { color: var(--down); }
+
+/* ── Benchmarks Grid (SPY, QQQ, SOX) ── */
+.benchmarks-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.benchmark-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 18px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-10);
+}
+.benchmark-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.benchmark-badge {
+  background: var(--accent);
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+.benchmark-price {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.benchmark-label {
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.benchmark-periods {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.benchmark-period { text-align: center; }
+.benchmark-period-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.benchmark-period-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 900px) {
+  .benchmarks-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .benchmark-card {
+    padding: 12px 14px;
+  }
+  .benchmark-price {
+    font-size: 18px;
+  }
+}
+.sep { width: 1px; background: var(--border); height: 40px; flex-shrink: 0; }
+
+/* ── Info bar ── */
+.info-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  margin-bottom: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-8);
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.info-bar b { color: var(--text-2); font-weight: 600; }
+
+/* ── Main Table ── */
+.tbl-wrap {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-10);
+  overflow: hidden;
+}
+.tbl-header {
+  display: grid;
+  grid-template-columns: 36px 200px 110px 90px 68px 68px 68px 68px 68px 80px 110px 80px 60px 72px 72px;
+  gap: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-soft);
+}
+.th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: right;
+  padding: 0 4px;
+  user-select: none;
+}
+.th.sortable {
+  cursor: pointer;
+  transition: color 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+}
+.th.sortable:hover { color: var(--text-2); }
+.th.active-col { color: var(--gold); }
+.th.col-first { text-align: center; }
+.th.col-name  { text-align: left; padding-left: 0; }
+.th .sort-ind { font-size: 8px; opacity: 0.7; }
+
+/* ── ETF Row ── */
+.etf-row {
+  display: grid;
+  grid-template-columns: 36px 200px 110px 90px 68px 68px 68px 68px 68px 80px 110px 80px 60px 72px 72px;
+  gap: 0;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(31, 45, 61, 0.5);
+  cursor: pointer;
+  transition: background 0.1s;
+  align-items: center;
+}
+.etf-row:hover { background: rgba(255,255,255,0.015); }
+.etf-row.expanded { background: rgba(41, 98, 255, 0.04); border-left: 2px solid var(--accent); }
+.etf-row.expanded:hover { background: rgba(41, 98, 255, 0.07); }
+
+.rank {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  font-weight: 600;
+}
+.etf-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.etf-name-ko { font-weight: 600; font-size: 13px; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.etf-ticker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.spark-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+.spark-svg {
+  width: 100px;
+  height: 30px;
+  overflow: visible;
+}
+.spark-empty {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+}
+.cell {
+  text-align: right;
+  padding: 0 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.cell.price { font-size: 13px; font-weight: 600; color: var(--text); padding-right: 8px; }
+.pct { font-weight: 500; font-size: 11px; }
+.pct.up   { color: var(--up); }
+.pct.down { color: var(--down); }
+.pct.zero { color: var(--muted); }
+.pct.active-period { font-weight: 700; font-size: 12px; }
+
+/* ── Position + vs SPY cell ── */
+.pos-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 6px;
+  border-left: 1px solid var(--border);
+}
+.pos-bar-wrap {
+  position: relative;
+  height: 4px;
+  background: var(--panel-3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.pos-bar-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--down), var(--gold) 50%, var(--up));
+  opacity: 0.55;
+}
+.pos-marker {
+  position: absolute;
+  top: -1px;
+  width: 2px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--text);
+  transform: translateX(-50%);
+}
+.pos-labels {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+.pos-pct-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  font-weight: 600;
+}
+.vs-spy-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.vs-spy-val.up   { color: var(--up); }
+.vs-spy-val.down { color: var(--down); }
+.vs-spy-val.zero { color: var(--muted); }
+
+/* ── Stat cells (beta, from-high, from-low) ── */
+.stat-cell {
+  text-align: right;
+  padding: 0 8px 0 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.stat-cell .label {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  display: block;
+  margin-bottom: 2px;
+}
+.stat-cell .val { font-weight: 600; }
+.stat-cell .val.up   { color: var(--up); }
+.stat-cell .val.down { color: var(--down); }
+.stat-cell .val.zero { color: var(--muted); }
+.stat-cell .val.beta-hi  { color: #f59e0b; }
+.stat-cell .val.beta-lo  { color: #6366f1; }
+.stat-cell .val.beta-mid { color: var(--text-2); }
+.th.group-sep { border-left: 1px solid var(--border); }
+
+/* ── Stock sub-rows ── */
+.stocks-panel {
+  background: var(--bg-soft);
+  border-bottom: 1px solid var(--border);
+}
+.stocks-header {
+  display: grid;
+  grid-template-columns: 36px 200px 110px 90px 68px 68px 68px 68px 68px 80px 110px 80px 60px 72px 72px;
+  gap: 0;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.stock-sub-row {
+  display: grid;
+  grid-template-columns: 36px 200px 110px 90px 68px 68px 68px 68px 68px 80px 110px 80px 60px 72px 72px;
+  gap: 0;
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(31, 45, 61, 0.3);
+  align-items: center;
+  transition: background 0.1s;
+}
+.stock-sub-row:hover { background: rgba(255,255,255,0.01); }
+.stock-sub-row:last-child { border-bottom: none; }
+.stock-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  margin: 0 auto;
+  background: var(--muted);
+}
+.stock-ticker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  letter-spacing: 0.02em;
+  margin-bottom: 1px;
+}
+.stock-name { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.loading-stocks {
+  padding: 20px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ── Mobile Card View ── */
+.mobile-wrap { display: none; }
+.mobile-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-10);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.mobile-card.expanded {
+  border-color: var(--accent);
+}
+.mobile-card-row1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.mobile-rank {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  min-width: 20px;
+}
+.mobile-name {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.mobile-name-ko {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.mobile-ticker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+.mobile-price {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: right;
+}
+.mobile-card-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 8px;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid rgba(31,45,61,0.5);
+}
+.mobile-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mobile-metric-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+.mobile-metric-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.mobile-pos-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.mobile-pos-bar {
+  position: relative;
+  height: 4px;
+  background: var(--panel-3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.mobile-pos-fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--down), var(--gold) 50%, var(--up));
+  opacity: 0.55;
+}
+.mobile-pos-marker {
+  position: absolute;
+  top: -1px;
+  width: 2px;
+  height: 6px;
+  background: var(--text);
+  transform: translateX(-50%);
+}
+.mobile-pos-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+}
+.mobile-pos-pct {
+  color: var(--text-2);
+  font-weight: 600;
+}
+.mobile-sort-bar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 10px 0;
+  margin-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.mobile-sort-bar::-webkit-scrollbar { display: none; }
+.mobile-sort-btn {
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.mobile-sort-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 700;
+}
+.mobile-expand {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(31,45,61,0.7);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+.mobile-expand-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.mobile-expand-label { color: var(--muted); }
+.mobile-expand-val { font-weight: 600; }
+.mobile-stocks {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(31,45,61,0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mobile-stock-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 11px;
+}
+.mobile-stock-info {
+  display: flex;
+  flex-direction: column;
+}
+.mobile-stock-sym {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 11px;
+}
+.mobile-stock-name {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+.mobile-stock-price {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-align: right;
+  min-width: 55px;
+}
+.mobile-stock-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+  min-width: 52px;
+}
+
+@media (max-width: 768px) {
+  .tbl-wrap { display: none; }
+  .mobile-wrap { display: block; }
+  #infoBar { display: none !important; }
+}
+
+
+.empty-state {
+  padding: 60px 20px;
+  text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.empty-state h3 { font-size: 16px; font-weight: 700; color: var(--text-2); }
+.empty-state p  { color: var(--muted); font-size: 12px; }
+
+.progress-wrap {
+  padding: 50px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.spinner { width: 36px; height: 36px; border: 2.5px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.progress-text { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-2); }
+.progress-bar { width: 280px; height: 3px; background: var(--bg-soft); border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--accent); transition: width 0.2s; }
+.progress-sub  { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); }
+
+.error-box {
+  background: rgba(239,83,80,0.08); border: 1px solid rgba(239,83,80,0.35); color: var(--down);
+  border-radius: var(--r-8); padding: 14px 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.6;
+}
+
+.footer {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; color: var(--muted);
+  padding: 14px 0 4px; letter-spacing: 0.03em;
+}
+a.link { color: var(--accent); text-decoration: none; }
+a.link:hover { text-decoration: underline; }
+
+/* Responsive */
+@media (max-width: 1380px) {
+  .tbl-header, .etf-row, .stocks-header, .stock-sub-row {
+    grid-template-columns: 30px 160px 90px 80px 60px 60px 60px 60px 60px 72px 100px 72px 54px 64px 64px;
+  }
+  .spark-svg { width: 80px; }
+}
+@media (max-width: 1100px) {
+  .tbl-header, .etf-row, .stocks-header, .stock-sub-row {
+    grid-template-columns: 28px 130px 70px 70px 54px 54px 54px 54px 54px 64px 90px 64px 48px 56px 56px;
+    padding: 10px 8px;
+  }
+  .spark-svg { width: 60px; height: 26px; }
+  .th { font-size: 9px; }
+  .cell, .pct, .stat-cell { font-size: 10px; }
+  .etf-name-ko { font-size: 11px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="brand">
+      <div class="brand-dot" id="statusDot"></div>
+      <div>
+        <h1>섹터 로테이션 대시보드</h1>
+        <div class="brand-sub">US ETF Performance · Finnhub</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="updated" id="updatedTime"></span>
+      <button class="icon-btn" id="settingsBtn" title="API 키 설정">⚙</button>
+      <button id="loadBtn">데이터 불러오기</button>
+    </div>
+  </header>
+
+  <div id="benchmarksGrid"></div>
+
+  <div id="infoBar" class="info-bar" style="display:none;">
+    <span>정렬 기준: <b id="activeSortLabel">1D</b></span>
+    <span>·</span>
+    <span id="sortDirLabel">높은 수익률 순</span>
+    <span style="margin-left:auto; opacity:0.7;">컬럼 헤더 클릭으로 정렬 변경</span>
+  </div>
+
+  <div id="mainContent">
+    <div class="tbl-wrap">
+      <div class="empty-state">
+        <h3>데이터 로딩 대기 중</h3>
+        <p>API 키를 먼저 설정하고 <b>데이터 불러오기</b> 버튼을 누르세요.</p>
+        <p class="mono" style="font-size:10px; color:var(--muted);">11개 섹터 ETF + 3개 벤치마크</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="mobileContent" class="mobile-wrap"></div>
+
+  <div class="footer">
+    Data: Finnhub Stock API · SPDR Sector ETFs · 참고용 자료
+  </div>
+
+</div>
+
+<!-- ── API Key Modal ── -->
+<div class="modal-overlay hidden" id="keyModal">
+  <div class="modal">
+    <h3>Finnhub API 키</h3>
+    <p>
+      <a class="link" href="https://finnhub.io/register" target="_blank">finnhub.io</a>에서 무료 가입 후 발급받은 토큰을 입력하세요.
+      이 기기 브라우저에만 저장됩니다.
+    </p>
+    <div class="key-row">
+      <input type="password" id="apiKey" placeholder="API 토큰 붙여넣기...">
+      <button class="ghost" id="toggleKey">보기</button>
+    </div>
+    <div class="modal-actions">
+      <span class="modal-msg" id="savedMsg"></span>
+      <button class="ghost" id="closeModalBtn">취소</button>
+      <button id="saveKeyBtn">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Universe ──────────────────────────────────────────
+const BENCHMARKS = [
+  { sym: "SPY",  nameKo: "S&P 500",    nameEn: "SPDR S&P 500 ETF" },
+  { sym: "QQQ",  nameKo: "나스닥 100", nameEn: "Invesco QQQ Trust" },
+  { sym: "SOXX", nameKo: "필라델피아 반도체", nameEn: "iShares Semiconductor ETF" },
+];
+const SPY = BENCHMARKS[0]; // backward compatibility
+
+const SECTORS = [
+  {
+    key: "XLK", nameKo: "기술",           nameEn: "Technology",             short: "Tech",      color: "#3b82f6",
+    stocks: [
+      {sym:"AAPL", nameKo:"애플",                  nameEn:"Apple"},
+      {sym:"MSFT", nameKo:"마이크로소프트",         nameEn:"Microsoft"},
+      {sym:"NVDA", nameKo:"엔비디아",               nameEn:"NVIDIA"},
+      {sym:"AVGO", nameKo:"브로드컴",               nameEn:"Broadcom"},
+      {sym:"ORCL", nameKo:"오라클",                 nameEn:"Oracle"},
+      {sym:"CRM",  nameKo:"세일즈포스",             nameEn:"Salesforce"},
+      {sym:"AMD",  nameKo:"AMD",                   nameEn:"AMD"},
+      {sym:"ADBE", nameKo:"어도비",                 nameEn:"Adobe"},
+      {sym:"QCOM", nameKo:"퀄컴",                   nameEn:"Qualcomm"},
+      {sym:"TXN",  nameKo:"텍사스 인스트루먼트",    nameEn:"Texas Instruments"},
+    ]
+  },
+  {
+    key: "XLV", nameKo: "헬스케어",       nameEn: "Healthcare",             short: "Health",    color: "#10b981",
+    stocks: [
+      {sym:"LLY",  nameKo:"일라이 릴리",         nameEn:"Eli Lilly"},
+      {sym:"UNH",  nameKo:"유나이티드헬스",       nameEn:"UnitedHealth"},
+      {sym:"JNJ",  nameKo:"존슨앤드존슨",         nameEn:"J&J"},
+      {sym:"ABBV", nameKo:"애브비",               nameEn:"AbbVie"},
+      {sym:"MRK",  nameKo:"머크",                 nameEn:"Merck"},
+      {sym:"TMO",  nameKo:"써모 피셔",            nameEn:"Thermo Fisher"},
+      {sym:"ABT",  nameKo:"애벗",                 nameEn:"Abbott"},
+      {sym:"AMGN", nameKo:"암젠",                 nameEn:"Amgen"},
+      {sym:"DHR",  nameKo:"다나허",               nameEn:"Danaher"},
+      {sym:"ISRG", nameKo:"인튜이티브 서지컬",    nameEn:"Intuitive Surgical"},
+    ]
+  },
+  {
+    key: "XLF", nameKo: "금융",           nameEn: "Financials",             short: "Finance",   color: "#8b5cf6",
+    stocks: [
+      {sym:"JPM",  nameKo:"JP모건 체이스",        nameEn:"JPMorgan Chase"},
+      {sym:"BAC",  nameKo:"뱅크오브아메리카",     nameEn:"Bank of America"},
+      {sym:"WFC",  nameKo:"웰스파고",             nameEn:"Wells Fargo"},
+      {sym:"GS",   nameKo:"골드만삭스",           nameEn:"Goldman Sachs"},
+      {sym:"MS",   nameKo:"모건스탠리",           nameEn:"Morgan Stanley"},
+      {sym:"BLK",  nameKo:"블랙록",               nameEn:"BlackRock"},
+      {sym:"SCHW", nameKo:"찰스 슈왑",            nameEn:"Charles Schwab"},
+      {sym:"AXP",  nameKo:"아메리칸 익스프레스",  nameEn:"American Express"},
+      {sym:"C",    nameKo:"씨티그룹",             nameEn:"Citigroup"},
+      {sym:"PGR",  nameKo:"프로그레시브",         nameEn:"Progressive"},
+    ]
+  },
+  {
+    key: "XLY", nameKo: "경기소비재",     nameEn: "Consumer Discretionary", short: "Cons.Disc", color: "#f59e0b",
+    stocks: [
+      {sym:"AMZN", nameKo:"아마존",               nameEn:"Amazon"},
+      {sym:"TSLA", nameKo:"테슬라",               nameEn:"Tesla"},
+      {sym:"HD",   nameKo:"홈디포",               nameEn:"Home Depot"},
+      {sym:"MCD",  nameKo:"맥도날드",             nameEn:"McDonald's"},
+      {sym:"NKE",  nameKo:"나이키",               nameEn:"Nike"},
+      {sym:"BKNG", nameKo:"부킹홀딩스",           nameEn:"Booking Holdings"},
+      {sym:"ORLY", nameKo:"오라일리 오토",        nameEn:"O'Reilly Auto"},
+      {sym:"CMG",  nameKo:"치폴레",               nameEn:"Chipotle"},
+      {sym:"LOW",  nameKo:"로우스",               nameEn:"Lowe's"},
+      {sym:"TJX",  nameKo:"TJX",                  nameEn:"TJX Companies"},
+    ]
+  },
+  {
+    key: "XLP", nameKo: "필수소비재",     nameEn: "Consumer Staples",       short: "Cons.Stap", color: "#eab308",
+    stocks: [
+      {sym:"WMT",   nameKo:"월마트",              nameEn:"Walmart"},
+      {sym:"PG",    nameKo:"P&G",                 nameEn:"Procter & Gamble"},
+      {sym:"KO",    nameKo:"코카콜라",            nameEn:"Coca-Cola"},
+      {sym:"COST",  nameKo:"코스트코",            nameEn:"Costco"},
+      {sym:"PEP",   nameKo:"펩시코",              nameEn:"PepsiCo"},
+      {sym:"PM",    nameKo:"필립 모리스",         nameEn:"Philip Morris"},
+      {sym:"MDLZ",  nameKo:"몬델레즈",            nameEn:"Mondelez"},
+      {sym:"CL",    nameKo:"콜게이트",            nameEn:"Colgate"},
+      {sym:"MO",    nameKo:"알트리아",            nameEn:"Altria"},
+      {sym:"KMB",   nameKo:"킴벌리 클라크",       nameEn:"Kimberly-Clark"},
+    ]
+  },
+  {
+    key: "XLE", nameKo: "에너지",         nameEn: "Energy",                 short: "Energy",    color: "#ef4444",
+    stocks: [
+      {sym:"XOM",  nameKo:"엑슨모빌",             nameEn:"ExxonMobil"},
+      {sym:"CVX",  nameKo:"쉐브론",               nameEn:"Chevron"},
+      {sym:"COP",  nameKo:"코노코필립스",         nameEn:"ConocoPhillips"},
+      {sym:"SLB",  nameKo:"슐럼버거",             nameEn:"Schlumberger"},
+      {sym:"EOG",  nameKo:"EOG 리소시즈",         nameEn:"EOG Resources"},
+      {sym:"MPC",  nameKo:"마라톤 페트롤리엄",    nameEn:"Marathon Petroleum"},
+      {sym:"PSX",  nameKo:"필립스 66",            nameEn:"Phillips 66"},
+      {sym:"OXY",  nameKo:"옥시덴탈 페트롤리엄",  nameEn:"Occidental"},
+      {sym:"HES",  nameKo:"헤스 코퍼레이션",      nameEn:"Hess Corp."},
+      {sym:"HAL",  nameKo:"할리버튼",             nameEn:"Halliburton"},
+    ]
+  },
+  {
+    key: "XLI", nameKo: "산업재",         nameEn: "Industrials",            short: "Indust.",   color: "#64748b",
+    stocks: [
+      {sym:"GE",   nameKo:"GE 에어로스페이스",    nameEn:"GE Aerospace"},
+      {sym:"CAT",  nameKo:"캐터필러",             nameEn:"Caterpillar"},
+      {sym:"RTX",  nameKo:"RTX",                  nameEn:"RTX Corp."},
+      {sym:"HON",  nameKo:"허니웰",               nameEn:"Honeywell"},
+      {sym:"UPS",  nameKo:"UPS",                  nameEn:"UPS"},
+      {sym:"UNP",  nameKo:"유니언 퍼시픽",        nameEn:"Union Pacific"},
+      {sym:"DE",   nameKo:"디어",                 nameEn:"Deere & Co."},
+      {sym:"ETN",  nameKo:"이튼",                 nameEn:"Eaton Corp."},
+      {sym:"CARR", nameKo:"캐리어 글로벌",        nameEn:"Carrier Global"},
+      {sym:"UBER", nameKo:"우버",                 nameEn:"Uber"},
+    ]
+  },
+  {
+    key: "XLB", nameKo: "소재",           nameEn: "Materials",              short: "Material",  color: "#14b8a6",
+    stocks: [
+      {sym:"LIN",  nameKo:"린데",                 nameEn:"Linde"},
+      {sym:"SHW",  nameKo:"셔윈 윌리엄스",        nameEn:"Sherwin-Williams"},
+      {sym:"APD",  nameKo:"에어 프로덕츠",        nameEn:"Air Products"},
+      {sym:"FCX",  nameKo:"프리포트 맥모란",      nameEn:"Freeport-McMoRan"},
+      {sym:"ECL",  nameKo:"에코랩",               nameEn:"Ecolab"},
+      {sym:"NEM",  nameKo:"뉴몬트",               nameEn:"Newmont"},
+      {sym:"DOW",  nameKo:"다우",                 nameEn:"Dow Inc."},
+      {sym:"VMC",  nameKo:"벌컨 머티리얼스",      nameEn:"Vulcan Materials"},
+      {sym:"MLM",  nameKo:"마틴 마리에타",        nameEn:"Martin Marietta"},
+      {sym:"NUE",  nameKo:"뉴코어",               nameEn:"Nucor"},
+    ]
+  },
+  {
+    key: "XLRE", nameKo: "부동산",        nameEn: "Real Estate",            short: "Real Est.", color: "#f97316",
+    stocks: [
+      {sym:"PLD",  nameKo:"프로로지스",           nameEn:"Prologis"},
+      {sym:"AMT",  nameKo:"아메리칸 타워",        nameEn:"American Tower"},
+      {sym:"EQIX", nameKo:"에퀴닉스",             nameEn:"Equinix"},
+      {sym:"WELL", nameKo:"웰타워",               nameEn:"Welltower"},
+      {sym:"SPG",  nameKo:"사이먼 프로퍼티",      nameEn:"Simon Property"},
+      {sym:"PSA",  nameKo:"퍼블릭 스토리지",      nameEn:"Public Storage"},
+      {sym:"DLR",  nameKo:"디지털 리얼티",        nameEn:"Digital Realty"},
+      {sym:"O",    nameKo:"리얼티 인컴",          nameEn:"Realty Income"},
+      {sym:"CCI",  nameKo:"크라운 캐슬",          nameEn:"Crown Castle"},
+      {sym:"AVB",  nameKo:"아발론베이",           nameEn:"AvalonBay"},
+    ]
+  },
+  {
+    key: "XLU", nameKo: "유틸리티",       nameEn: "Utilities",              short: "Utilities", color: "#6366f1",
+    stocks: [
+      {sym:"NEE",  nameKo:"넥스트에라 에너지",    nameEn:"NextEra Energy"},
+      {sym:"SO",   nameKo:"서던 컴퍼니",          nameEn:"Southern Co."},
+      {sym:"DUK",  nameKo:"듀크 에너지",          nameEn:"Duke Energy"},
+      {sym:"CEG",  nameKo:"컨스텔레이션 에너지",  nameEn:"Constellation Energy"},
+      {sym:"VST",  nameKo:"비스트라",             nameEn:"Vistra Corp."},
+      {sym:"AEP",  nameKo:"아메리칸 일렉트릭",    nameEn:"Am. Electric Power"},
+      {sym:"EXC",  nameKo:"엑셀론",               nameEn:"Exelon"},
+      {sym:"SRE",  nameKo:"셈프라",               nameEn:"Sempra"},
+      {sym:"D",    nameKo:"도미니언 에너지",      nameEn:"Dominion Energy"},
+      {sym:"XEL",  nameKo:"엑셀 에너지",          nameEn:"Xcel Energy"},
+    ]
+  },
+  {
+    key: "XLC", nameKo: "커뮤니케이션",   nameEn: "Communication Svcs",     short: "Comm.",     color: "#ec4899",
+    stocks: [
+      {sym:"META",  nameKo:"메타 플랫폼스",       nameEn:"Meta Platforms"},
+      {sym:"GOOGL", nameKo:"알파벳",              nameEn:"Alphabet"},
+      {sym:"NFLX",  nameKo:"넷플릭스",            nameEn:"Netflix"},
+      {sym:"DIS",   nameKo:"디즈니",              nameEn:"Disney"},
+      {sym:"TMUS",  nameKo:"T-모바일",            nameEn:"T-Mobile"},
+      {sym:"CMCSA", nameKo:"컴캐스트",            nameEn:"Comcast"},
+      {sym:"T",     nameKo:"AT&T",                nameEn:"AT&T"},
+      {sym:"VZ",    nameKo:"버라이즌",            nameEn:"Verizon"},
+      {sym:"EA",    nameKo:"EA",                  nameEn:"Electronic Arts"},
+      {sym:"CHTR",  nameKo:"차터 커뮤니케이션",   nameEn:"Charter Comm."},
+    ]
+  },
+];
+
+// ─── SOX (Philadelphia Semiconductor) Stocks ───────────
+const SOX_STOCKS = [
+  {sym:"NVDA", nameKo:"엔비디아",               nameEn:"NVIDIA"},
+  {sym:"AMD",  nameKo:"AMD",                    nameEn:"AMD"},
+  {sym:"INTC", nameKo:"인텔",                   nameEn:"Intel"},
+  {sym:"QCOM", nameKo:"퀄컴",                   nameEn:"Qualcomm"},
+  {sym:"AVGO", nameKo:"브로드컴",               nameEn:"Broadcom"},
+  {sym:"TXN",  nameKo:"텍사스 인스트루먼트",    nameEn:"Texas Instruments"},
+  {sym:"ADI",  nameKo:"아날로그 디바이스",      nameEn:"Analog Devices"},
+  {sym:"AMAT", nameKo:"어플라이드 머티리얼즈",  nameEn:"Applied Materials"},
+  {sym:"LRCX", nameKo:"램 리서치",              nameEn:"Lam Research"},
+  {sym:"KLAC", nameKo:"KLA",                    nameEn:"KLA Corp."},
+  {sym:"MCHP", nameKo:"마이크로칩",             nameEn:"Microchip Technology"},
+  {sym:"MU",   nameKo:"마이크론",               nameEn:"Micron Technology"},
+  {sym:"NXPI", nameKo:"NXP",                    nameEn:"NXP Semiconductors"},
+  {sym:"MRVL", nameKo:"마벨",                   nameEn:"Marvell Technology"},
+  {sym:"ON",   nameKo:"온세미",                 nameEn:"ON Semiconductor"},
+];
+
+// ─── Period definitions ────────────────────────────────
+const PERIODS = [
+  { id: "d1",  label: "1D"  },
+  { id: "d5",  label: "5D"  },
+  { id: "m1",  label: "1M"  },
+  { id: "m3",  label: "3M"  },
+  { id: "ytd", label: "YTD" },
+  { id: "y1",  label: "52W" },
+];
+
+// ─── State ─────────────────────────────────────────────
+const STORAGE_KEY = "finnhub_key_v3";
+const BASE = "https://finnhub.io/api/v1";
+let state = {
+  etfData: null,       // { SPY: {...}, QQQ: {...}, SOXX: {...}, XLK: {...}, ... }
+  stockData: {},       // { XLK: [{...}, ...], ... }
+  soxData: null,       // SOX stocks array
+  loadingStocks: {},   // { XLK: true/false }
+  loadingSOX: false,
+  expanded: null,
+  expandedSOX: false,
+  sortPeriod: "d1",
+  sortAsc: false,
+  loading: false,
+  error: null,
+};
+
+const $ = id => document.getElementById(id);
+
+// ─── API Key Modal ─────────────────────────────────────
+function openKeyModal() { $("keyModal").classList.remove("hidden"); $("apiKey").focus(); }
+function closeKeyModal() { $("keyModal").classList.add("hidden"); $("savedMsg").textContent = ""; }
+
+$("settingsBtn").addEventListener("click", openKeyModal);
+$("closeModalBtn").addEventListener("click", closeKeyModal);
+$("keyModal").addEventListener("click", e => { if (e.target.id === "keyModal") closeKeyModal(); });
+
+$("toggleKey").addEventListener("click", () => {
+  const inp = $("apiKey");
+  const isPw = inp.type === "password";
+  inp.type = isPw ? "text" : "password";
+  $("toggleKey").textContent = isPw ? "숨기기" : "보기";
+});
+
+$("saveKeyBtn").addEventListener("click", () => {
+  const k = $("apiKey").value.trim();
+  if (!k) { $("savedMsg").textContent = "키를 입력하세요"; $("savedMsg").className = "modal-msg err"; return; }
+  try {
+    localStorage.setItem(STORAGE_KEY, k);
+    $("savedMsg").textContent = "저장 완료";
+    $("savedMsg").className = "modal-msg ok";
+    setTimeout(closeKeyModal, 600);
+  } catch (e) {
+    $("savedMsg").textContent = e.message;
+    $("savedMsg").className = "modal-msg err";
+  }
+});
+
+function getApiKey() {
+  try {
+    return localStorage.getItem(STORAGE_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+// Pre-load key value into input for convenience
+try {
+  const k = localStorage.getItem(STORAGE_KEY);
+  if (k) $("apiKey").value = k;
+} catch {}
+
+// ─── Fetch helpers ─────────────────────────────────────
+async function fetchQuote(sym) {
+  const r = await fetch(`${BASE}/quote?symbol=${sym}&token=${getApiKey()}`);
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+async function fetchMetric(sym) {
+  const r = await fetch(`${BASE}/stock/metric?symbol=${sym}&metric=all&token=${getApiKey()}`);
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const d = await r.json();
+  return d.metric || {};
+}
+
+// Sparkline: synthesize from period returns already fetched.
+// No additional API call needed.
+// Points: [3M ago, 1M ago, 5D ago, 1D ago, now]
+function buildSyntheticCandle(d) {
+  if (!d || d.price == null) return null;
+  const p = d.price;
+  const pts = [];
+  // Each return is % from that point to today, so back-calculate
+  if (d.m3  != null) pts.push({ t: 0, v: p / (1 + d.m3  / 100) });
+  if (d.m1  != null) pts.push({ t: 1, v: p / (1 + d.m1  / 100) });
+  if (d.d5  != null) pts.push({ t: 2, v: p / (1 + d.d5  / 100) });
+  if (d.d1  != null) pts.push({ t: 3, v: p / (1 + d.d1  / 100) });
+  pts.push({ t: 4, v: p });
+  // Need at least 3 points for a meaningful chart
+  if (pts.length < 3) return null;
+  // Sort by t and return values array
+  pts.sort((a, b) => a.t - b.t);
+  return pts.map(pt => pt.v);
+}
+
+function extractPeriods(quote, metric) {
+  return {
+    d1:  quote?.dp ?? null,
+    d5:  metric?.["5DayPriceReturnDaily"] ?? null,
+    m1:  metric?.["monthToDatePriceReturnDaily"] ?? null,
+    m3:  metric?.["13WeekPriceReturnDaily"] ?? null,
+    ytd: metric?.["yearToDatePriceReturnDaily"] ?? null,
+    y1:  metric?.["52WeekPriceReturnDaily"] ?? null,
+    price:    quote?.c ?? null,
+    yearHigh: metric?.["52WeekHigh"] ?? null,
+    yearLow:  metric?.["52WeekLow"]  ?? null,
+    beta:     metric?.["beta"]       ?? null,
+  };
+}
+
+// ─── Load ETF data ─────────────────────────────────────
+$("loadBtn").addEventListener("click", loadEtfs);
+
+async function loadEtfs() {
+  const key = getApiKey();
+  if (!key) {
+    openKeyModal();
+    $("savedMsg").textContent = "먼저 API 키를 저장하세요";
+    $("savedMsg").className = "modal-msg err";
+    return;
+  }
+
+  state.loading = true;
+  state.error = null;
+  state.etfData = null;
+  state.stockData = {};
+  state.soxData = null;
+  state.loadingStocks = {};
+  state.loadingSOX = false;
+  state.expanded = null;
+  state.expandedSOX = false;
+  $("loadBtn").disabled = true;
+  $("loadBtn").textContent = "로딩 중...";
+  $("statusDot").className = "brand-dot loading";
+  $("infoBar").style.display = "none";
+  renderProgress(0, "ETF 기본 데이터");
+
+  const allEtfs = [...BENCHMARKS.map(b => b.sym), ...SECTORS.map(s => s.key)];
+  let done = 0;
+  const result = {};
+
+  async function fetchBasic(sym) {
+    const [q, m] = await Promise.all([fetchQuote(sym), fetchMetric(sym)]);
+    result[sym] = extractPeriods(q, m);
+    done++;
+    renderProgress(done / allEtfs.length, `ETF · ${done}/${allEtfs.length}`);
+  }
+
+  const queue = [...allEtfs];
+  async function worker() { while (queue.length > 0) { await fetchBasic(queue.shift()); } }
+
+  try {
+    await Promise.all(Array(4).fill(0).map(worker));
+    if (!result[SPY.sym]) throw new Error("데이터를 받지 못했습니다. API 키를 확인하세요.");
+    state.etfData = result;
+    // Build synthetic sparklines from already-fetched period returns (no extra API calls)
+    BENCHMARKS.forEach(bench => {
+      const d = result[bench.sym];
+      if (d) d.candle = buildSyntheticCandle(d);
+    });
+    SECTORS.forEach(sec => {
+      const d = result[sec.key];
+      if (d) d.candle = buildSyntheticCandle(d);
+    });
+
+    $("statusDot").className = "brand-dot ok";
+    $("updatedTime").textContent = new Date().toLocaleTimeString();
+    $("infoBar").style.display = "";
+  } catch (e) {
+    state.error = e.message;
+    $("statusDot").className = "brand-dot err";
+  } finally {
+    state.loading = false;
+    $("loadBtn").disabled = false;
+    $("loadBtn").textContent = "새로고침";
+    renderAll();
+  }
+}
+
+// ─── On-demand stock load ──────────────────────────────
+async function loadStocks(sectorKey) {
+  if (state.stockData[sectorKey] || state.loadingStocks[sectorKey]) return;
+  state.loadingStocks[sectorKey] = true;
+  renderAll();
+
+  const sec = SECTORS.find(s => s.key === sectorKey);
+  if (!sec) return;
+
+  const result = [];
+  const queue = [...sec.stocks];
+  async function worker() {
+    while (queue.length > 0) {
+      const stk = queue.shift();
+      try {
+        const [q, m] = await Promise.all([fetchQuote(stk.sym), fetchMetric(stk.sym)]);
+        result.push({ ...stk, ...extractPeriods(q, m) });
+      } catch { result.push({ ...stk, price: null }); }
+    }
+  }
+  await Promise.all(Array(4).fill(0).map(worker));
+
+  state.stockData[sectorKey] = result;
+  state.loadingStocks[sectorKey] = false;
+  renderAll();
+}
+
+// ─── Helpers ───────────────────────────────────────────
+function fmtPrice(v) { return v == null ? "—" : "$" + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmtPct(v, large) {
+  if (v == null) return '<span class="pct zero">—</span>';
+  const cls = v > 0 ? "up" : v < 0 ? "down" : "zero";
+  const str = (v > 0 ? "+" : "") + v.toFixed(2) + "%";
+  return `<span class="pct ${cls}${large ? " active-period" : ""}">${str}</span>`;
+}
+function getPeriodVal(d, pid) { return d ? d[pid] ?? null : null; }
+
+// ─── Sparkline SVG ─────────────────────────────────────
+function sparkline(data, isUp) {
+  if (!data || data.length < 2) return '<span class="spark-empty">—</span>';
+  const w = 100, h = 30, pad = 2;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const step = (w - pad * 2) / (data.length - 1);
+  const points = data.map((v, i) => {
+    const x = pad + i * step;
+    const y = pad + (h - pad * 2) * (1 - (v - min) / range);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const color = isUp ? "#26a69a" : "#ef5350";
+  const fillColor = isUp ? "rgba(38,166,154,0.15)" : "rgba(239,83,80,0.15)";
+  const polyline = points.join(" ");
+  const areaPath = `M ${pad},${h - pad} L ${points.join(" L ")} L ${(pad + (data.length - 1) * step).toFixed(1)},${h - pad} Z`;
+  return `
+    <svg class="spark-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <path d="${areaPath}" fill="${fillColor}" stroke="none"/>
+      <polyline points="${polyline}" fill="none" stroke="${color}" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>
+  `;
+}
+
+// ─── Progress ──────────────────────────────────────────
+function renderProgress(pct, text) {
+  $("benchmarksGrid").innerHTML = "";
+  const progressHtml = `
+    <div class="progress-wrap">
+      <div class="spinner"></div>
+      <div class="progress-text">${text || "로딩 중"}</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct*100}%"></div></div>
+      <div class="progress-sub">Finnhub /quote + /stock/metric</div>
+    </div>
+  `;
+  $("mainContent").innerHTML = `<div class="tbl-wrap">${progressHtml}</div>`;
+  $("mobileContent").innerHTML = progressHtml;
+}
+
+// ─── Render all ────────────────────────────────────────
+function pctColor(v) {
+  if (v == null) return "var(--muted)";
+  if (v >  10) return "#00e676";
+  if (v >   5) return "#26a69a";
+  if (v >   0) return "#4caf50";
+  if (v >  -5) return "#ef5350";
+  if (v > -10) return "#e53935";
+  return "#b71c1c";
+}
+
+function renderAll() {
+  if (state.loading) return;
+  if (state.error) {
+    $("benchmarksGrid").innerHTML = "";
+    $("mainContent").innerHTML = `<div class="error-box"><b>오류:</b> ${state.error}</div>`;
+    $("mobileContent").innerHTML = `<div class="error-box" style="margin:20px;"><b>오류:</b> ${state.error}</div>`;
+    return;
+  }
+  if (!state.etfData) {
+    $("benchmarksGrid").innerHTML = "";
+    $("mainContent").innerHTML = `
+      <div class="tbl-wrap">
+        <div class="empty-state">
+          <h3>데이터 로딩 대기 중</h3>
+          <p>API 키를 먼저 설정하고 <b>데이터 불러오기</b> 버튼을 누르세요.</p>
+          <p class="mono" style="font-size:10px; color:var(--muted);">11개 섹터 ETF + 3개 벤치마크</p>
+        </div>
+      </div>
+    `;
+    $("mobileContent").innerHTML = `
+      <div class="empty-state" style="padding:40px 20px;">
+        <h3>데이터 로딩 대기 중</h3>
+        <p>API 키를 먼저 설정하고 <b>새로고침</b> 버튼을 누르세요.</p>
+      </div>
+    `;
+    return;
+  }
+
+  renderBenchmarks();
+  renderInfoBar();
+  renderTable();
+  renderMobile();
+}
+
+function renderInfoBar() {
+  const p = PERIODS.find(p => p.id === state.sortPeriod);
+  $("activeSortLabel").textContent = p.label;
+  $("sortDirLabel").textContent = state.sortAsc ? "낮은 수익률 순" : "높은 수익률 순";
+}
+
+function renderBenchmarks() {
+  const activePid = state.sortPeriod;
+  const activeLabel = PERIODS.find(pr => pr.id === activePid)?.label;
+  
+  const html = BENCHMARKS.map(bench => {
+    const d = state.etfData[bench.sym];
+    const periods = [
+      { label: "1D",  val: d?.d1  },
+      { label: "5D",  val: d?.d5  },
+      { label: "1M",  val: d?.m1  },
+      { label: "3M",  val: d?.m3  },
+      { label: "YTD", val: d?.ytd },
+      { label: "52W", val: d?.y1  },
+    ];
+    
+    return `
+      <div class="benchmark-card">
+        <div class="benchmark-header">
+          <span class="benchmark-badge">${bench.sym}</span>
+          <div>
+            <div class="benchmark-label">${bench.nameKo}</div>
+            <div class="benchmark-price mono">${fmtPrice(d?.price)}</div>
+          </div>
+        </div>
+        <div class="benchmark-periods">
+          ${periods.map(p => {
+            const v = p.val;
+            const color = pctColor(v);
+            const str = v == null ? "—" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
+            const isActive = p.label === activeLabel;
+            return `
+              <div class="benchmark-period">
+                <div class="benchmark-period-label">${p.label}</div>
+                <div class="benchmark-period-val" style="color:${color}; ${isActive ? 'text-decoration:underline; text-underline-offset:3px; text-decoration-color:' + color + ';' : ''}">${str}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  $("benchmarksGrid").innerHTML = `<div class="benchmarks-grid">${html}</div>`;
+}
+
+function betaCell(d) {
+  const b = d?.beta;
+  if (b == null) return `<div class="stat-cell"><span class="label">β</span><span class="val zero">—</span></div>`;
+  const cls = b > 1.2 ? "beta-hi" : b < 0.8 ? "beta-lo" : "beta-mid";
+  return `<div class="stat-cell"><span class="label">BETA</span><span class="val ${cls}">${b.toFixed(2)}</span></div>`;
+}
+
+function fromHighCell(d) {
+  if (d?.price == null || d?.yearHigh == null) return `<div class="stat-cell"><span class="label">고점대비</span><span class="val zero">—</span></div>`;
+  const pct = ((d.price - d.yearHigh) / d.yearHigh) * 100;
+  if (pct > 0) return `<div class="stat-cell"><span class="label">고점대비</span><span class="val up" style="font-size:10px; letter-spacing:-0.03em;">신고가</span></div>`;
+  const cls = pct > -5 ? "zero" : pct > -20 ? "down" : "down";
+  return `<div class="stat-cell"><span class="label">고점대비</span><span class="val ${cls}">${pct.toFixed(1)}%</span></div>`;
+}
+
+function fromLowCell(d) {
+  if (d?.price == null || d?.yearLow == null) return `<div class="stat-cell"><span class="label">저점대비</span><span class="val zero">—</span></div>`;
+  const pct = ((d.price - d.yearLow) / d.yearLow) * 100;
+  const cls = pct > 20 ? "up" : pct > 5 ? "zero" : "down";
+  const str = "+" + pct.toFixed(1) + "%";
+  return `<div class="stat-cell"><span class="label">저점대비</span><span class="val ${cls}">${str}</span></div>`;
+}
+function positionBarCell(d) {
+  if (!d || d.price == null || d.yearHigh == null || d.yearLow == null || d.yearHigh === d.yearLow) {
+    return `<div class="pos-cell"><div class="pos-bar-wrap"><div class="pos-bar-fill" style="width:0;"></div></div><div class="pos-labels"><span class="pos-pct-val">—</span></div></div>`;
+  }
+  const posPct = ((d.price - d.yearLow) / (d.yearHigh - d.yearLow)) * 100;
+  const clamp = Math.min(100, Math.max(0, posPct));
+  return `
+    <div class="pos-cell">
+      <div class="pos-bar-wrap">
+        <div class="pos-bar-fill" style="width:100%;"></div>
+        <div class="pos-marker" style="left:${clamp}%;"></div>
+      </div>
+      <div class="pos-labels">
+        <span class="pos-pct-val">${posPct.toFixed(0)}%</span>
+      </div>
+    </div>
+  `;
+}
+
+function vsSpyCell(diff) {
+  if (diff == null) return `<div class="cell"><span class="vs-spy-val zero">—</span></div>`;
+  const cls = diff > 0.05 ? "up" : diff < -0.05 ? "down" : "zero";
+  const str = (diff > 0 ? "+" : "") + diff.toFixed(2) + "%p";
+  return `<div class="cell" style="text-align:right; padding-right:10px;"><span class="vs-spy-val ${cls}">${str}</span></div>`;
+}
+
+function renderTable() {
+  const pid = state.sortPeriod;
+  const spyData = state.etfData[SPY.sym];
+
+  // Sort sectors by active period
+  const sorted = [...SECTORS].sort((a, b) => {
+    const av = getPeriodVal(state.etfData[a.key], pid);
+    const bv = getPeriodVal(state.etfData[b.key], pid);
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    return state.sortAsc ? av - bv : bv - av;
+  });
+
+  const pids = ["d1","d5","m1","m3","ytd","y1"];
+
+  // Header
+  let html = `<div class="tbl-wrap">`;
+  html += `<div class="tbl-header">
+    <div class="th col-first">#</div>
+    <div class="th col-name">섹터 / ETF</div>
+    <div class="th">차트 (1M)</div>
+    <div class="th">현재가</div>
+    ${PERIODS.map((p) => {
+      const isActive = p.id === pid;
+      const arrow = isActive ? (state.sortAsc ? "▲" : "▼") : "⇅";
+      return `<div class="th sortable ${isActive ? "active-col" : ""}" onclick="sortBy('${p.id}')">${p.label}<span class="sort-ind">${arrow}</span></div>`;
+    }).join("")}
+    <div class="th group-sep" style="text-align:left; padding-left:6px;">52주 위치</div>
+    <div class="th" style="text-align:right; padding-right:8px;">vs SPY</div>
+    <div class="th group-sep" style="text-align:right;">BETA</div>
+    <div class="th" style="text-align:right;">고점대비</div>
+    <div class="th" style="text-align:right; padding-right:14px;">저점대비</div>
+  </div>`;
+
+  // Rows
+  sorted.forEach((sec, idx) => {
+    const d = state.etfData[sec.key];
+    const isExpanded = state.expanded === sec.key;
+    const sparkHtml = d.candle ? sparkline(d.candle, (d.d1 ?? d.m1 ?? 0) >= 0) : '<span class="spark-empty">—</span>';
+
+    // vs SPY: diff of sector's active period vs SPY's active period
+    const secVal = getPeriodVal(d, pid);
+    const spyVal = getPeriodVal(spyData, pid);
+    const vsSpy = (secVal != null && spyVal != null) ? secVal - spyVal : null;
+
+    html += `
+      <div class="etf-row ${isExpanded ? "expanded" : ""}" onclick="toggleSector('${sec.key}')">
+        <div class="rank">${idx + 1}</div>
+        <div class="etf-info">
+          <div class="etf-name-ko" style="color:${sec.color};">${sec.nameKo}</div>
+          <div class="etf-ticker">${sec.key} ${isExpanded ? "▲" : "▼"}</div>
+        </div>
+        <div class="spark-cell">${sparkHtml}</div>
+        <div class="cell price">${fmtPrice(d?.price)}</div>
+        ${pids.map(p => `<div class="cell">${fmtPct(d?.[p], p === pid)}</div>`).join("")}
+        ${positionBarCell(d)}
+        ${vsSpyCell(vsSpy)}
+        ${betaCell(d)}
+        ${fromHighCell(d)}
+        ${fromLowCell(d)}
+      </div>
+    `;
+
+    if (isExpanded) {
+      html += `<div class="stocks-panel">`;
+      if (state.loadingStocks[sec.key]) {
+        html += `<div class="loading-stocks">종목 데이터 로딩 중...</div>`;
+      } else if (state.stockData[sec.key]) {
+        const stocks = [...state.stockData[sec.key]].sort((a, b) => {
+          const av = getPeriodVal(a, pid);
+          const bv = getPeriodVal(b, pid);
+          if (av == null && bv == null) return 0;
+          if (av == null) return 1;
+          if (bv == null) return -1;
+          return state.sortAsc ? av - bv : bv - av;
+        });
+        // Sub-header
+        html += `
+          <div class="stocks-header">
+            <div class="th"></div>
+            <div class="th col-name" style="color:var(--muted);">대표 종목</div>
+            <div class="th"></div>
+            <div class="th">현재가</div>
+            ${PERIODS.map(p => `<div class="th ${p.id === pid ? "active-col" : ""}">${p.label}</div>`).join("")}
+            <div class="th group-sep" style="text-align:left; padding-left:6px;">52주 위치</div>
+            <div class="th" style="text-align:right; padding-right:8px;">vs ETF</div>
+            <div class="th group-sep" style="text-align:right;">BETA</div>
+            <div class="th" style="text-align:right;">고점대비</div>
+            <div class="th" style="text-align:right; padding-right:14px;">저점대비</div>
+          </div>
+        `;
+        stocks.forEach(s => {
+          const av = getPeriodVal(s, pid);
+          const dotColor = av == null ? "var(--muted)" : av > 0 ? "var(--up)" : av < 0 ? "var(--down)" : "var(--muted)";
+          const stkVsEtf = (av != null && secVal != null) ? av - secVal : null;
+          html += `
+            <div class="stock-sub-row">
+              <div><div class="stock-dot" style="background:${dotColor};"></div></div>
+              <div class="etf-info">
+                <div class="stock-ticker">${s.sym}</div>
+                <div class="stock-name">${s.nameKo}</div>
+              </div>
+              <div></div>
+              <div class="cell price" style="font-size:12px;">${fmtPrice(s.price)}</div>
+              ${pids.map(p => `<div class="cell" style="font-size:11px;">${fmtPct(s[p], p === pid)}</div>`).join("")}
+              ${positionBarCell(s)}
+              ${vsSpyCell(stkVsEtf)}
+              ${betaCell(s)}
+              ${fromHighCell(s)}
+              ${fromLowCell(s)}
+            </div>
+          `;
+        });
+      } else {
+        html += `<div class="loading-stocks">불러오는 중...</div>`;
+      }
+      html += `</div>`;
+    }
+  });
+
+  // ─── SOX Section ───
+  const soxxData = state.etfData['SOXX'];
+  const isSOXExpanded = state.expandedSOX;
+  const soxxVal = getPeriodVal(soxxData, pid);
+  const spyVal = getPeriodVal(spyData, pid);
+  const soxxVsSpy = (soxxVal != null && spyVal != null) ? soxxVal - spyVal : null;
+
+  html += `
+    <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--border);">
+      <div class="etf-row ${isSOXExpanded ? "expanded" : ""}" onclick="toggleSOX()" style="background:rgba(239,68,68,0.04); border-left:2px solid #ef4444;">
+        <div class="rank" style="color:#ef4444;">SOX</div>
+        <div class="etf-info">
+          <div class="etf-name-ko" style="color:#ef4444;">필라델피아 반도체</div>
+          <div class="etf-ticker">SOXX ${isSOXExpanded ? "▲" : "▼"}</div>
+        </div>
+        <div class="spark-cell">${soxxData?.candle ? sparkline(soxxData.candle, (soxxData.d1 ?? 0) >= 0) : '<span class="spark-empty">—</span>'}</div>
+        <div class="cell price">${fmtPrice(soxxData?.price)}</div>
+        ${pids.map(p => `<div class="cell">${fmtPct(soxxData?.[p], p === pid)}</div>`).join("")}
+        ${positionBarCell(soxxData)}
+        ${vsSpyCell(soxxVsSpy)}
+        ${betaCell(soxxData)}
+        ${fromHighCell(soxxData)}
+        ${fromLowCell(soxxData)}
+      </div>
+  `;
+
+  if (isSOXExpanded) {
+    html += `<div class="stocks-panel">`;
+    if (state.loadingSOX) {
+      html += `<div class="loading-stocks">SOX 종목 데이터 로딩 중...</div>`;
+    } else if (state.soxData) {
+      const soxStocks = [...state.soxData].sort((a, b) => {
+        const av = getPeriodVal(a, pid);
+        const bv = getPeriodVal(b, pid);
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        return state.sortAsc ? av - bv : bv - av;
+      });
+      html += `
+        <div class="stocks-header">
+          <div class="th"></div>
+          <div class="th col-name" style="color:var(--muted);">반도체 구성 종목</div>
+          <div class="th"></div>
+          <div class="th">현재가</div>
+          ${PERIODS.map(p => `<div class="th ${p.id === pid ? "active-col" : ""}">${p.label}</div>`).join("")}
+          <div class="th group-sep" style="text-align:left; padding-left:6px;">52주 위치</div>
+          <div class="th" style="text-align:right; padding-right:8px;">vs SOXX</div>
+          <div class="th group-sep" style="text-align:right;">BETA</div>
+          <div class="th" style="text-align:right;">고점대비</div>
+          <div class="th" style="text-align:right; padding-right:14px;">저점대비</div>
+        </div>
+      `;
+      soxStocks.forEach(s => {
+        const av = getPeriodVal(s, pid);
+        const dotColor = av == null ? "var(--muted)" : av > 0 ? "var(--up)" : av < 0 ? "var(--down)" : "var(--muted)";
+        const stkVsSOXX = (av != null && soxxVal != null) ? av - soxxVal : null;
+        html += `
+          <div class="stock-sub-row">
+            <div><div class="stock-dot" style="background:${dotColor};"></div></div>
+            <div class="etf-info">
+              <div class="stock-ticker">${s.sym}</div>
+              <div class="stock-name">${s.nameKo}</div>
+            </div>
+            <div></div>
+            <div class="cell price" style="font-size:12px;">${fmtPrice(s.price)}</div>
+            ${pids.map(p => `<div class="cell" style="font-size:11px;">${fmtPct(s[p], p === pid)}</div>`).join("")}
+            ${positionBarCell(s)}
+            ${vsSpyCell(stkVsSOXX)}
+            ${betaCell(s)}
+            ${fromHighCell(s)}
+            ${fromLowCell(s)}
+          </div>
+        `;
+      });
+    } else {
+      html += `<div class="loading-stocks">불러오는 중...</div>`;
+    }
+    html += `</div>`;
+  }
+  html += `</div>`;
+
+  html += `</div>`;
+  $("mainContent").innerHTML = html;
+}
+
+// ─── Mobile Card View ──────────────────────────────────
+function mobilePctStr(v) {
+  if (v == null) return "—";
+  return (v > 0 ? "+" : "") + v.toFixed(2) + "%";
+}
+
+function mobilePosBar(d) {
+  if (!d || d.price == null || d.yearHigh == null || d.yearLow == null || d.yearHigh === d.yearLow) {
+    return `<div class="mobile-pos-wrap"><div class="mobile-pos-bar"></div><div class="mobile-pos-label"><span class="mobile-pos-pct">—</span></div></div>`;
+  }
+  const pct = ((d.price - d.yearLow) / (d.yearHigh - d.yearLow)) * 100;
+  const clamp = Math.min(100, Math.max(0, pct));
+  return `
+    <div class="mobile-pos-wrap">
+      <div class="mobile-pos-bar">
+        <div class="mobile-pos-fill"></div>
+        <div class="mobile-pos-marker" style="left:${clamp}%;"></div>
+      </div>
+      <div class="mobile-pos-label">
+        <span class="mobile-pos-pct">52W</span>
+        <span class="mobile-pos-pct">${pct.toFixed(0)}%</span>
+      </div>
+    </div>
+  `;
+}
+
+function mobileCard(entry, idx, type) {
+  // type: 'sector' | 'sox' | 'stock'
+  const d = entry.data;
+  const pid = state.sortPeriod;
+  const pidLabel = PERIODS.find(p => p.id === pid)?.label || "1D";
+  const pidVal = getPeriodVal(d, pid);
+  const d1Val = d?.d1;
+
+  const expanded = type === 'sector' ? state.expanded === entry.key : type === 'sox' ? state.expandedSOX : false;
+  const clickHandler = type === 'sector' ? `onclick="toggleSector('${entry.key}')"` 
+                     : type === 'sox'    ? `onclick="toggleSOX()"` 
+                     : '';
+
+  // Expanded stocks list for sectors
+  let stocksHtml = '';
+  if (expanded) {
+    const stocks = type === 'sector' ? state.stockData[entry.key] : type === 'sox' ? state.soxData : null;
+    const loading = type === 'sector' ? state.loadingStocks[entry.key] : state.loadingSOX;
+    if (loading) {
+      stocksHtml = `<div class="mobile-stocks"><div style="text-align:center; color:var(--muted); font-size:11px; padding:10px;">종목 로딩 중...</div></div>`;
+    } else if (stocks) {
+      const sorted = [...stocks].sort((a, b) => {
+        const av = getPeriodVal(a, pid);
+        const bv = getPeriodVal(b, pid);
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        return state.sortAsc ? av - bv : bv - av;
+      });
+      stocksHtml = `<div class="mobile-stocks" onclick="event.stopPropagation()">` +
+        sorted.map(s => {
+          const sv = getPeriodVal(s, pid);
+          const col = pctColor(sv);
+          return `
+            <div class="mobile-stock-row">
+              <div class="mobile-stock-info">
+                <span class="mobile-stock-sym">${s.sym}</span>
+                <span class="mobile-stock-name">${s.nameKo}</span>
+              </div>
+              <span class="mobile-stock-price">${fmtPrice(s.price)}</span>
+              <span class="mobile-stock-pct" style="color:${col};">${mobilePctStr(sv)}</span>
+            </div>
+          `;
+        }).join('') +
+      `</div>`;
+    }
+  }
+
+  // Expanded extra metrics
+  let expandHtml = '';
+  if (expanded) {
+    const vsSpyLabel = type === 'sox' ? 'vs SPY' : 'vs SPY';
+    const spyVal = getPeriodVal(state.etfData[SPY.sym], pid);
+    const dv = getPeriodVal(d, pid);
+    const vsSpy = (spyVal != null && dv != null) ? dv - spyVal : null;
+    const fromHi = (d?.price != null && d?.yearHigh != null) 
+      ? ((d.price - d.yearHigh) / d.yearHigh) * 100 : null;
+    const fromLo = (d?.price != null && d?.yearLow != null) 
+      ? ((d.price - d.yearLow) / d.yearLow) * 100 : null;
+
+    expandHtml = `
+      <div class="mobile-expand">
+        <div class="mobile-expand-item">
+          <span class="mobile-expand-label">vs SPY</span>
+          <span class="mobile-expand-val" style="color:${pctColor(vsSpy)};">${vsSpy == null ? '—' : (vsSpy > 0 ? '+' : '') + vsSpy.toFixed(2) + '%p'}</span>
+        </div>
+        <div class="mobile-expand-item">
+          <span class="mobile-expand-label">BETA</span>
+          <span class="mobile-expand-val" style="color:${d?.beta > 1.2 ? '#f59e0b' : d?.beta < 0.8 ? '#6366f1' : 'var(--text-2)'};">${d?.beta != null ? d.beta.toFixed(2) : '—'}</span>
+        </div>
+        <div class="mobile-expand-item">
+          <span class="mobile-expand-label">고점대비</span>
+          <span class="mobile-expand-val" style="color:${fromHi > 0 ? 'var(--up)' : fromHi > -5 ? 'var(--muted)' : 'var(--down)'};">${fromHi == null ? '—' : fromHi > 0 ? '신고가' : fromHi.toFixed(1) + '%'}</span>
+        </div>
+        <div class="mobile-expand-item">
+          <span class="mobile-expand-label">저점대비</span>
+          <span class="mobile-expand-val" style="color:${fromLo > 20 ? 'var(--up)' : fromLo > 5 ? 'var(--muted)' : 'var(--down)'};">${fromLo == null ? '—' : '+' + fromLo.toFixed(1) + '%'}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  const rankLabel = type === 'sox' ? 'SOX' : (idx + 1);
+  const rankColor = type === 'sox' ? '#ef4444' : 'var(--muted)';
+  const nameColor = type === 'sox' ? '#ef4444' : (entry.color || 'var(--text)');
+  const borderStyle = type === 'sox' ? 'border-left:2px solid #ef4444;' : '';
+
+  return `
+    <div class="mobile-card ${expanded ? 'expanded' : ''}" ${clickHandler} style="${borderStyle}">
+      <div class="mobile-card-row1">
+        <span class="mobile-rank" style="color:${rankColor};">${rankLabel}</span>
+        <div class="mobile-name">
+          <span class="mobile-name-ko" style="color:${nameColor};">${entry.nameKo}</span>
+          <span class="mobile-ticker">${entry.sym} ${expanded ? '▲' : '▼'}</span>
+        </div>
+        <span class="mobile-price">${fmtPrice(d?.price)}</span>
+      </div>
+      <div class="mobile-card-row2">
+        <div class="mobile-metric">
+          <span class="mobile-metric-label">1D</span>
+          <span class="mobile-metric-val" style="color:${pctColor(d1Val)};">${mobilePctStr(d1Val)}</span>
+        </div>
+        <div class="mobile-metric">
+          <span class="mobile-metric-label">${pidLabel}</span>
+          <span class="mobile-metric-val" style="color:${pctColor(pidVal)};">${mobilePctStr(pidVal)}</span>
+        </div>
+        ${mobilePosBar(d)}
+      </div>
+      ${expandHtml}
+      ${stocksHtml}
+    </div>
+  `;
+}
+
+function renderMobile() {
+  const pid = state.sortPeriod;
+
+  // Sort bar
+  let html = `<div class="mobile-sort-bar">` +
+    PERIODS.map(p => `
+      <button class="mobile-sort-btn ${p.id === pid ? 'active' : ''}" onclick="sortBy('${p.id}')">${p.label}</button>
+    `).join('') +
+    `</div>`;
+
+  // Sort sectors
+  const sorted = [...SECTORS].sort((a, b) => {
+    const av = getPeriodVal(state.etfData[a.key], pid);
+    const bv = getPeriodVal(state.etfData[b.key], pid);
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    return state.sortAsc ? av - bv : bv - av;
+  });
+
+  sorted.forEach((sec, idx) => {
+    html += mobileCard({
+      sym: sec.key,
+      nameKo: sec.nameKo,
+      color: sec.color,
+      key: sec.key,
+      data: state.etfData[sec.key]
+    }, idx, 'sector');
+  });
+
+  // SOX section
+  const soxxData = state.etfData['SOXX'];
+  if (soxxData) {
+    html += `<div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);">`;
+    html += mobileCard({
+      sym: 'SOXX',
+      nameKo: '필라델피아 반도체',
+      data: soxxData
+    }, 0, 'sox');
+    html += `</div>`;
+  }
+
+  $("mobileContent").innerHTML = html;
+}
+
+// ─── Interactions ──────────────────────────────────────
+window.sortBy = function(pid) {
+  if (state.sortPeriod === pid) {
+    state.sortAsc = !state.sortAsc;
+  } else {
+    state.sortPeriod = pid;
+    state.sortAsc = false;
+  }
+  renderAll();
+};
+
+window.toggleSector = function(key) {
+  if (state.expanded === key) {
+    state.expanded = null;
+    renderAll();
+  } else {
+    state.expanded = key;
+    renderAll();
+    if (!state.stockData[key] && !state.loadingStocks[key]) {
+      loadStocks(key);
+    }
+  }
+};
+
+window.toggleSOX = function() {
+  if (state.expandedSOX) {
+    state.expandedSOX = false;
+    renderAll();
+  } else {
+    state.expandedSOX = true;
+    renderAll();
+    if (!state.soxData && !state.loadingSOX) {
+      loadSOX();
+    }
+  }
+};
+
+async function loadSOX() {
+  state.loadingSOX = true;
+  renderAll();
+  
+  const result = [];
+  let done = 0;
+  
+  async function fetchStock(stockDef) {
+    try {
+      const [q, m] = await Promise.all([fetchQuote(stockDef.sym), fetchMetric(stockDef.sym)]);
+      const data = extractPeriods(q, m);
+      result.push({ ...stockDef, ...data });
+      done++;
+    } catch (e) {
+      console.error(`Failed to fetch ${stockDef.sym}:`, e);
+    }
+  }
+  
+  const queue = [...SOX_STOCKS];
+  async function worker() {
+    while (queue.length > 0) {
+      await fetchStock(queue.shift());
+    }
+  }
+  
+  try {
+    await Promise.all(Array(4).fill(0).map(worker));
+    state.soxData = result;
+  } catch (e) {
+    console.error("Failed to load SOX stocks:", e);
+  }
+  
+  state.loadingSOX = false;
+  renderAll();
+}
+
+// ─── Init ──────────────────────────────────────────────
+// If no key stored, open modal on first visit
+if (!getApiKey()) {
+  setTimeout(openKeyModal, 300);
+}
+</script>
+</body>
+</html>
